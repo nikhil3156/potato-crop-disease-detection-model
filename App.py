@@ -29,17 +29,6 @@ st.markdown("""
     margin: 1rem;
 }
 
-.st-emotion-cache-16txtl3 {
-    padding: 2rem 1rem 1rem;
-}
-
-.st-emotion-cache-1y4p8pa {
-    width: 100%;
-    padding: 1rem;
-    border-radius: 0.5rem;
-    background-color: #FFFFFF;
-}
-
 h1, h2, h3 {
     color: #4A4A4A;
     font-family: 'Arial', sans-serif;
@@ -51,9 +40,6 @@ h1, h2, h3 {
     background-color: #4CAF50;
     border: none;
     padding: 15px 32px;
-    text-align: center;
-    text-decoration: none;
-    display: inline-block;
     font-size: 16px;
     margin: 4px 2px;
     cursor: pointer;
@@ -77,11 +63,11 @@ h1, h2, h3 {
 }
 
 .prediction-card-healthy {
-    border-left-color: #4CAF50; /* Green */
+    border-left-color: #4CAF50;
 }
 
 .prediction-card-disease {
-    border-left-color: #f44336; /* Red */
+    border-left-color: #f44336;
 }
 
 .prediction-title {
@@ -97,156 +83,119 @@ h1, h2, h3 {
 </style>
 """, unsafe_allow_html=True)
 
-
-# --- Model Integration ---
-# Load your trained model
+# --- Load Model ---
 try:
     model = load_model('model.h5')
 except Exception as e:
-    st.error(f"Error: The model file 'model.h5' could not be loaded. Please ensure it's in the same directory as app.py.", icon="🚨")
+    st.error("Error loading 'model.h5'. Make sure it's in the same folder as app.py.", icon="🚨")
     st.error(f"Details: {e}")
     st.stop()
 
-
+# --- Prediction Function ---
 def predict_disease(image_data):
-    """
-    This function takes an image, preprocesses it, and returns the predicted disease and confidence.
-    """
-    # 1. Preprocess the image
-    #    Make sure the target_size matches the input size of your model
     image = image_data.resize((256, 256))
-    image_array = tf.keras.preprocessing.image.img_to_array(image)
-    image_array = image_array / 255.0  # Normalize the image
-    image_array = np.expand_dims(image_array, axis=0)  # Add batch dimension
+    image_array = np.array(image) / 255.0
+    img_input = np.expand_dims(image_array, axis=0)
 
-    # 2. Make a prediction
-    predictions = model.predict(image_array)
+    predictions = model.predict(img_input)
     predicted_class_index = np.argmax(predictions[0])
     confidence = float(np.max(predictions[0]))
 
-    # 3. Get the class name
-    # IMPORTANT: Make sure this list matches the order of classes your model was trained on!
     class_names = ['Potato___Early_blight', 'Potato___Late_blight', 'Potato___healthy']
-    
-    # Safety check for class index
     if predicted_class_index >= len(class_names):
         return "Unknown Class", 0.0
+    return class_names[predicted_class_index], confidence
 
-    predicted_class_name = class_names[predicted_class_index]
-
-    return predicted_class_name, confidence
-
-
-# --- Disease Information ---
+# --- Disease Info ---
 DISEASE_INFO = {
     "Potato___Early_blight": {
         "title": "Early Blight",
-        "description": "Early blight is a fungal disease caused by *Alternaria solani*. It primarily affects leaves and tubers. Symptoms include small, dark, circular to oval lesions, often with a characteristic 'target spot' or 'bull's-eye' appearance.",
+        "description": "Early blight is a fungal disease caused by Alternaria solani...",
         "remedies": [
             "Use disease-resistant potato varieties.",
             "Practice crop rotation with non-host crops.",
-            "Apply fungicides preventatively, especially during warm, humid conditions.",
+            "Apply fungicides preventatively.",
             "Ensure good air circulation and avoid overhead irrigation.",
             "Remove and destroy infected plant debris."
         ]
     },
     "Potato___Late_blight": {
         "title": "Late Blight",
-        "description": "Late blight, caused by the oomycete *Phytophthora infestans*, is one of the most destructive potato diseases. It appears as pale green, water-soaked spots, often at the tips or edges of leaves. These spots enlarge rapidly and turn dark brown or black.",
+        "description": "Late blight, caused by Phytophthora infestans, is destructive...",
         "remedies": [
             "Plant certified disease-free seed potatoes.",
-            "Implement a preventative fungicide spray program.",
+            "Implement preventative fungicide spray programs.",
             "Ensure proper spacing between plants to promote airflow.",
-            "Destroy cull piles and volunteer potato plants.",
-            "Harvest during dry weather and ensure tubers are dry before storage."
+            "Destroy volunteer plants and cull piles.",
+            "Harvest during dry weather."
         ]
     },
     "Potato___healthy": {
         "title": "Healthy",
-        "description": "The plant appears to be healthy. No significant disease symptoms are detected on the leaf. Continue with good agricultural practices to maintain plant health.",
+        "description": "No significant disease symptoms detected.",
         "remedies": [
-            "Continue regular monitoring for pests and diseases.",
-            "Ensure balanced fertilization and proper irrigation.",
+            "Monitor regularly for pests and diseases.",
+            "Ensure balanced fertilization and irrigation.",
             "Maintain good field sanitation.",
-            "Practice crop rotation to prevent soil-borne issues."
+            "Practice crop rotation."
         ]
     }
 }
 
-
-# --- Main Application UI ---
+# --- Main UI ---
 st.title("🥔 Potato Crop Disease Detector 🌿")
-st.markdown("### Upload an image of a potato leaf to detect if it's healthy or has a disease.")
+st.markdown("### Upload a potato leaf image to detect diseases.")
 
 # --- Sidebar ---
 with st.sidebar:
     st.header("About This Project")
     st.markdown("""
-    This web application uses a deep learning model (Convolutional Neural Network) to detect common diseases in potato crops from leaf images.
-
-    **Created by:** [Your Name Here]
+    Deep learning model (CNN) to detect potato leaf diseases.
     """)
     st.markdown("---")
     st.markdown("Connect with me:")
     st.markdown("[LinkedIn](https://www.linkedin.com/) | [GitHub](https://github.com/) | [Portfolio](https://www.google.com/)")
-    st.markdown("*(Replace the links above with your actual profiles!)*")
     st.markdown("---")
-    st.success("The model is loaded and the app is ready!")
+    st.success("The model is loaded and ready!")
 
-
-# --- File Uploader and Main Content ---
+# --- File Uploader ---
 col1, col2 = st.columns(2, gap="large")
 
 with col1:
     uploaded_file = st.file_uploader("Choose a leaf image...", type=["jpg", "jpeg", "png"])
-    if uploaded_file is not None:
+    if uploaded_file:
         image = Image.open(uploaded_file)
         st.image(image, caption='Uploaded Leaf Image.', use_column_width=True)
         st.markdown(
-            """
-            <div style='text-align: center; font-style: italic; color: #555;'>
-                Image successfully uploaded. Click 'Predict' to analyze.
-            </div>
-            """, unsafe_allow_html=True
+            "<div style='text-align: center; font-style: italic; color: #555;'>Image uploaded. Click 'Predict' to analyze.</div>",
+            unsafe_allow_html=True
         )
 
 with col2:
     st.markdown("## Prediction Results")
-    st.markdown("The analysis of the leaf image will be displayed here.")
-
-    if uploaded_file is not None and st.button('Predict Disease'):
-        with st.spinner('Analyzing the leaf... Please wait.'):
-            # Make prediction
+    st.markdown("The analysis of the leaf image will appear here.")
+    
+    if uploaded_file and st.button('Predict Disease'):
+        with st.spinner('Analyzing the leaf...'):
             prediction, confidence = predict_disease(image)
-            
-            # Check if the prediction is valid
             if prediction in DISEASE_INFO:
                 info = DISEASE_INFO[prediction]
-                
-                # Display result
-                st.markdown("---")
-                if "healthy" in prediction:
-                    card_class = "prediction-card-healthy"
-                else:
-                    card_class = "prediction-card-disease"
-
+                card_class = "prediction-card-healthy" if "healthy" in prediction else "prediction-card-disease"
                 st.markdown(f"""
                 <div class="prediction-card {card_class}">
                     <div class="prediction-title">Prediction: {info['title']}</div>
                     <div class="confidence-score">Confidence: {confidence:.2%}</div>
                 </div>
                 """, unsafe_allow_html=True)
-                
                 st.markdown("---")
                 st.subheader("🔎 More Information")
                 st.markdown(f"**Description:** {info['description']}")
-                
                 st.subheader("💡 Recommended Actions")
                 for remedy in info['remedies']:
                     st.markdown(f"- {remedy}")
             else:
-                st.error("Could not classify the image. Please try a different one.")
+                st.error("Could not classify the image. Try a different one.")
+    elif not uploaded_file:
+        st.info("Please upload an image to start.")
 
 
-    elif uploaded_file is None:
-        st.info("Please upload an image to get started.")
